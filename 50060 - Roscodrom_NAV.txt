@@ -1,0 +1,220 @@
+OBJECT Codeunit 50060 Roscodrom_NAV
+{
+  OBJECT-PROPERTIES
+  {
+    Date=07/05/24;
+    Time=17:04:29;
+    Modified=Yes;
+    Version List=;
+  }
+  PROPERTIES
+  {
+    OnRun=BEGIN
+
+            // Iniciem el men£ principal
+            MainMenu();
+          END;
+
+  }
+  CODE
+  {
+    VAR
+      Window@1106000011 : DotNet "'Microsoft.VisualBasic, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a'.Microsoft.VisualBasic.Interaction" RUNONCLIENT;
+      CR@1106000010 : Char;
+      LF@1106000009 : Char;
+      Menu@1106000008 : Text;
+      TfnUsuari@1106000007 : Text;
+      TfnNouUsuari@1106000006 : Text;
+      NickNouUsuari@1106000005 : Text;
+      EmailNouUsuari@1106000004 : Text;
+      Usuaris@1106000003 : Record 50048;
+      isValid@1106000002 : Boolean;
+      MeuDialeg@1106000000 : Dialog;
+      IdUsuari@1106000001 : Text;
+      IdUsuariPartida@1106000013 : Text;
+      Partides@1106000012 : Record 50050;
+      TotalPartides@1106000014 : Integer;
+      PartidesGuanyades@1106000015 : Integer;
+      PercentatgeGuanyades@1106000016 : Decimal;
+      i@1106000017 : Integer;
+
+    LOCAL PROCEDURE MainMenu@1106000000();
+    BEGIN
+
+      CR := 13; // Carriage Return - (Hex $0D)
+      LF := 10; // Line Feed - (Hex $0A)
+
+      // Despleguem un petit men£ amb 2 opcions a escollir
+      Menu := Window.InputBox('1. Consulta de les dades d''un usuari' + FORMAT(CR) + FORMAT(LF) +
+                              '2. Consulta de l''£ltima partida d''un usuari' + FORMAT(CR) + FORMAT(LF) +
+                              '3. Consulta del percentatge de partides guanyades', 'Rosc•drom-NAV', 'Introdueix una opci¢', 100, 100);
+
+      // Cridem una funci¢ depenent de l'elúlecci¢ de l'usuari
+      CASE Menu OF
+        '1':
+          BEGIN
+            ConsultarUsuaris();
+          END;
+        '2':
+          BEGIN
+            ConsultarUltimaPartida();
+          END;
+        '3':
+          BEGIN
+            ConsultarPercentatgeGuanyades();
+          END;
+      END;
+    END;
+
+    LOCAL PROCEDURE ComprovarValorNumeric@1106000003(StrToCheck@1106000000 : Text) : Boolean;
+    BEGIN
+
+      BEGIN
+          // Iterem cadascun dels car…cters del camp de text
+          FOR i := 1 TO STRLEN(StrToCheck) DO BEGIN
+              // Comprovem si el car…cter actual no ‚s un d¡git
+              IF NOT ((StrToCheck[i] >= '0') AND (StrToCheck[i] <= '9')) THEN
+                  EXIT(FALSE);
+          END;
+          // En cas que tots els car…cters siguin numŠrics, retornem TRUE
+          EXIT(TRUE);
+      END;
+    END;
+
+    LOCAL PROCEDURE ConsultarUsuaris@1106000006();
+    BEGIN
+
+      // Demanem un id
+      IdUsuari := Window.InputBox('Introduir l''id d''un usuari.', 'Rosc•drom-Consulta Usuaris', 'Id d''usuari', 100, 100);
+
+      // Comprovem que l'id proporcionat sigui v…lid
+      IF NOT ComprovarValorNumeric(IdUsuari) THEN BEGIN
+        Window.MsgBox('L''id ha de ser numŠric.', 0, 'Rosc•drom - Consulta Usuaris');
+      END
+      ELSE BEGIN
+        // Obtenim totes les dades de l'usuari amb l'id proporcionat
+        WITH Usuaris DO BEGIN
+          IF GET(IdUsuari) THEN BEGIN
+            Window.MsgBox(
+              'Id de l''usuari: ' + FORMAT(Usuaris.Id) + FORMAT(CR) + FORMAT(LF) +
+              'Nickname de l''usuari: ' + Usuaris.Nickname + FORMAT(CR) + FORMAT(LF) +
+              'Email de l''usuari: ' + Usuaris.Email + FORMAT(CR) + FORMAT(LF) +
+              'TelŠfon de l''usuari: ' + FORMAT(Usuaris.PhoneNumber) + FORMAT(CR) + FORMAT(LF) +
+              'Avatar de l''usuari: ' + Usuaris.Avatar + FORMAT(CR) + FORMAT(LF) +
+              'ApiKey de l''usuari: ' + Usuaris.ApiKey, 0, 'Rosc•drom - Consulta usuaris'
+            );
+          END
+          ELSE BEGIN
+            Window.MsgBox('No s''ha trobat cap usuari amb aquest id.', 0, 'Rosc•drom - Consulta Usuaris');
+          END;
+        END;
+      END;
+
+      // Tornem al men£ principal
+      MainMenu();
+    END;
+
+    LOCAL PROCEDURE ConsultarUltimaPartida@1106000005();
+    BEGIN
+
+      // Demanem un id
+      IdUsuariPartida := Window.InputBox('Introduir l''id d''un usuari.', 'Rosc•drom - Consulta £ltima partida', 'Id d''usuari', 100, 100);
+
+      // Comprovem que l'id proporcionat sigui v…lid
+      IF NOT ComprovarValorNumeric(IdUsuariPartida) THEN BEGIN
+        Window.MsgBox('L''id ha de ser numŠric.', 0, 'Rosc•drom - Consulta Usuaris');
+      END
+      ELSE BEGIN
+        // Obtenim les dades de la partida amb la data m‚s gran
+        WITH Partides DO BEGIN
+          SETFILTER(IdUsuari, IdUsuariPartida);
+          SETCURRENTKEY(Partides.DataPartida);
+          ASCENDING(TRUE);
+          // Cerquem el primer registre
+          IF FINDFIRST THEN BEGIN
+            // Ens despla‡em cap a l'£ltim registre
+            IF NOT FINDLAST THEN BEGIN
+              ERROR('Error a l''hora de despla‡ar-se cap a l''£ltim registre.');
+            END;
+
+            // Check if the found record is for the given user
+            IF FORMAT(Partides.IdUsuari) = IdUsuariPartida THEN BEGIN
+              Window.MsgBox(
+                'Id de l''usuari: ' + FORMAT(Partides.IdUsuari) + FORMAT(CR) + FORMAT(LF) +
+                'Id de la partida: ' + FORMAT(Partides.IdPartida) + FORMAT(CR) + FORMAT(LF) +
+                'Data de la partida: '  + FORMAT(Partides.DataPartida) + FORMAT(CR) + FORMAT(LF) +
+                'Nombre de paraules trobades: '  + FORMAT(Partides.Paraules) + FORMAT(CR) + FORMAT(LF) +
+                'Puntuaci¢: '  + FORMAT(Partides.Puntuacio) + FORMAT(CR) + FORMAT(LF) +
+                'Partida guanyada? '  + FORMAT(Partides.Guanyador), 0, 'Rosc•drom - Consulta £ltima partida'
+              );
+            END
+            ELSE BEGIN
+              Window.MsgBox('No s''ha trobat cap partida per a aquest usuari.', 0, 'Rosc•drom - Consulta £ltima partida');
+            END;
+          END
+          ELSE BEGIN
+            Window.MsgBox('No s''ha trobat cap partida per a aquest usuari.', 0, 'Rosc•drom - Consulta £ltima partida');
+          END;
+        END;
+      END;
+
+      // Tornem al men£ principal
+      MainMenu();
+    END;
+
+    LOCAL PROCEDURE ConsultarPercentatgeGuanyades@1106000002();
+    BEGIN
+
+      // Demanem un id
+      IdUsuariPartida := Window.InputBox('Introduir l''id d''un usuari.', 'Rosc•drom - Consulta percentatge de partides guanyades', 'Id d''usuari', 100, 100);
+
+      TotalPartides := 0;
+      PartidesGuanyades := 0;
+      PercentatgeGuanyades := 0;
+
+      // Comprovem que l'id proporcionat sigui v…lid
+      IF NOT ComprovarValorNumeric(IdUsuariPartida) THEN BEGIN
+        Window.MsgBox('L''id ha de ser numŠric.', 0, 'Rosc•drom - Consulta Usuaris');
+      END
+      ELSE BEGIN
+        // Obtenim les partides que ha realitzat l'usuari
+        WITH Partides DO BEGIN
+          SETFILTER(IdUsuari, IdUsuariPartida);
+          IF FINDSET THEN BEGIN
+            REPEAT
+              // Incrementem el comptador de partides
+              TotalPartides += 1;
+              // Verifiquem si s'ha guanyat la partida
+              IF Partides.Guanyador = 'S¡' THEN BEGIN
+                PartidesGuanyades += 1;
+              END;
+            UNTIL NEXT = 0;
+          END;
+        END;
+      END;
+
+      // Calculem el percentatge de partides guanyades
+      IF TotalPartides > 0 THEN BEGIN;
+        PercentatgeGuanyades := (PartidesGuanyades / TotalPartides) * 100
+      END
+      ELSE BEGIN
+        PercentatgeGuanyades := 0;
+      END;
+
+      // Mostrem el resultat
+      Window.MsgBox(
+          'Id de l''usuari: ' + IdUsuariPartida + FORMAT(CR) + FORMAT(LF) +
+          'Partides jugades: ' + FORMAT(TotalPartides) + FORMAT(CR) + FORMAT(LF) +
+          'Partides guanyades: ' + FORMAT(PartidesGuanyades) + FORMAT(CR) + FORMAT(LF) +
+          'Percentatge de partides guanyades: '  + FORMAT(PercentatgeGuanyades) + '%', 0, 'Rosc•drom - Consulta percentatge de partides guanyades'
+      );
+
+      // Tornem al men£ principal
+      MainMenu();
+    END;
+
+    BEGIN
+    END.
+  }
+}
+

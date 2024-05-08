@@ -1,0 +1,36 @@
+OBJECT Table 50050 Usuaris per Partida
+{
+  OBJECT-PROPERTIES
+  {
+    Date=07/05/24;
+    Time=16:00:36;
+    Modified=Yes;
+    Version List=;
+  }
+  PROPERTIES
+  {
+  }
+  FIELDS
+  {
+    { 1   ;   ;IdPartida           ;Integer        }
+    { 2   ;   ;Paraules            ;Integer        }
+    { 3   ;   ;Puntuacio           ;Integer        }
+    { 4   ;   ;DataPartida         ;Text30         }
+    { 5   ;   ;Guanyador           ;Text30         }
+    { 6   ;   ;IdUsuari            ;Integer        }
+  }
+  KEYS
+  {
+    {    ;IdPartida                               ;Clustered=Yes }
+  }
+  FIELDGROUPS
+  {
+  }
+  CODE
+  {
+
+    BEGIN
+    END.
+  }
+}
+
